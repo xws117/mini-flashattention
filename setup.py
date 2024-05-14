@@ -2,7 +2,7 @@
 import sys
 import warnings
 import os
-from pathlib import Path
+
 
 from setuptools import setup, find_packages
 import subprocess
@@ -11,17 +11,15 @@ import torch
 from torch.utils.cpp_extension import BuildExtension, CppExtension, CUDAExtension, CUDA_HOME
 
 
-
-
 ext_modules = [] 
 ext_modules.append(
     CUDAExtension(
-        name="mini-flashattn",
+        name="mini_flashattention",
         sources=[
-            "hello.cu",
+            "fmha_api.cpp",
         ],
         extra_compile_args={
-            "cxx": ["-O3", "-std=c++17"] #+ generator_flag,
+            "cxx": ["-O3", "-std=c++17"], #+ generator_flag,
             "nvcc": 
                 [
                     "-O3",
@@ -44,14 +42,14 @@ ext_modules.append(
 )
 
 setup(
-    name="mini-flashatten",
+    name="mini_flashattention",
     version="0.0.1",
     packages=find_packages(
         exclude=("build", "csrc", "include", "tests", "dist", "docs", "benchmarks", "flash_attn.egg-info",)
     ),
-    author="Xws",
+    author="xws117",
     author_email="shamy117@qq.com",
-    description="Minimize implementation of Flash Attention",
+    description="a simple cuda code implementation of FlashAttention",
     # long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/xws117/mini-flashattention",
