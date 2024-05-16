@@ -12,3 +12,6 @@
 #pragma once#
 
 
+struct kernel_traits{
+
+};

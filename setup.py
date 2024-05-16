@@ -17,6 +17,7 @@ ext_modules.append(
         name="mini_flashattention",
         sources=[
             "fmha_api.cpp",
+            "device_1xN_loop.cu"
         ],
         extra_compile_args={
             "cxx": ["-O3", "-std=c++17"], #+ generator_flag,

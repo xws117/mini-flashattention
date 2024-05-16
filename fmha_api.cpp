@@ -10,11 +10,11 @@
 #include <iostream>
 #include "kernel_traits.h"
 #include "params.h"
-
+#include "device_1xN_loop.cu"
 
 void fwd(
-        const at::Tensor &q,  // q,k,v's shape is [batch, seqlen ,heads, dim]
-        const at::Tensor &k,  // q,k,v's size is [64, 1024, 16 64]
+        const at::Tensor &q,  // q,k,v's shape is [batch * seqlen ,heads, dim]
+        const at::Tensor &k,  // q,k,v's size is [64 * 1024, 16 64]
         const at::Tensor &v
         ){
     // print shape of q
@@ -32,18 +32,18 @@ void fwd(
     int warps_N = 4;
     int THREADS = 128;
 
-    auto batch_size = q_size[0];
-    auto seqlen = q_size[1];
-    auto num_heads = q_size[2];
-    auto head_size = q_siez[3];
+    auto batch_size = 64;
+    auto seqlen = 1024;
+    auto num_heads = q_size[1];
+    auto head_size = q_size[2];
 
     //TODO
-    auto tile_q = Tile{16,256, 64, 1,4,1};
-    auto tile_k = Tile{16, 64,256, 1,4,1};
+    auto tile_q = Tile{16,256, 32, 1,4,1};
+    auto tile_k = Tile{16, 32,256, 1,4,1};
     //auto tile_v = Tile{1,2,3};
 
     auto param = Params{
-        batch_size,seqlen,num_heads,head_size,tile_q,tile_k
+        batch_size,seqlen,num_heads,head_size,tile_q,tile_k,q.data_ptr(),k.data_ptr(),v.data_ptr(),q.stride(0),q.stride(1)
     };
 
 
@@ -51,7 +51,7 @@ void fwd(
     dim3 grid(batch_size, num_heads, 1);
 
     //TODO
-    device_block_1xN_loop<<<grid, 128>>>(params);
+    device_1xN_loop<<<grid, 128>>>(params);
 
 }
 

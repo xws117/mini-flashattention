@@ -23,6 +23,9 @@ def attention_ref(qkv):
 
 def cuda_attention_ref(qkv):
     q, k, v = qkv.unbind(dim=2)
+    q = rearrange(q,'b s h d -> t h d').detach().requires_grad_()
+    k = rearrange(q,'b s h d -> t h d').detach().requires_grad_()
+    v = rearrange(q,'b s h d -> t h d').detach().requires_grad_()
     fwd(q,k,v)
 
 
@@ -30,7 +33,7 @@ repeats = 30
 batch_size = 64
 nheads = 16
 seqlen = 1024
-n = 1024
+n = 512
 d = n // nheads
 device = 'cuda'
 dtype = torch.float16
