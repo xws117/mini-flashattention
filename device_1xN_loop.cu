@@ -8,7 +8,7 @@ inline __device__ void device_1xN_(const Params &params, const int bidb, const i
 //                                    const uint32_t head_stride_in_elts, const int headdim, const int tidx)
 
     const int tidx = threadIdx.x;
-    Gmem_tile_qkv q = {params.q, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
+    Gmem_tile_qkv q = {params.q_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
     if (tidx==0){
         printf("hhhh");
     }
@@ -38,4 +38,16 @@ inline __device__ void device_1xN_loop(const Params &params){
         device_1xN_(params, bidb, bidh, STEPS,  loop_step_idx);
     }
     device_1xN_(params, bidb, bidh, STEPS,  max_loop_steps - 1);
+}
+
+__global__ void fmha_fprop_fp16_sm80_loop_kernel(Params params) {
+    device_1xN_loop(params);
+}
+
+void run_fmha_fp16_sm80(Params params) {
+    auto batch_size = params.b;
+    auto num_heads = params.h;
+    // 这里面的block的size是 batch * heads ，也就是每一个block里面，处理完整的一个q*k^*v的运算
+    dim3 grid(batch_size, num_heads, 1);
+    fmha_fprop_fp16_sm80_loop_kernel<<<grid,128>>>(params);
 }

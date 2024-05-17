@@ -24,7 +24,7 @@ ext_modules.append(
             "nvcc": 
                 [
                     "-O3",
-                    "-std=c++17",
+                    #"-std=c++17",
                     "-U__CUDA_NO_HALF_OPERATORS__",
                     "-U__CUDA_NO_HALF_CONVERSIONS__",
                     "--expt-relaxed-constexpr",

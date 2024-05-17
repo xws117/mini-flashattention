@@ -20,12 +20,16 @@ struct Params{
     int s;
     int h;
     int d;
+
     Tile tile_q;
     Tile tile_k;
     Tile tile_v;
-    char* q;
-    char* k;
-    char* v;
+
+    void *__restrict__ q_ptr;
+    void *__restrict__ k_ptr;
+    void *__restrict__ v_ptr;
+
     int row_stride_in_elts;
     int head_stride_in_elts;
+
 };

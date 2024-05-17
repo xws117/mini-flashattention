@@ -10,7 +10,9 @@
 #include <iostream>
 #include "kernel_traits.h"
 #include "params.h"
-#include "device_1xN_loop.cu"
+
+
+void run_fmha_fp16_sm80(Params params);
 
 void fwd(
         const at::Tensor &q,  // q,k,v's shape is [batch * seqlen ,heads, dim]
@@ -40,18 +42,17 @@ void fwd(
     //TODO
     auto tile_q = Tile{16,256, 32, 1,4,1};
     auto tile_k = Tile{16, 32,256, 1,4,1};
-    //auto tile_v = Tile{1,2,3};
+    auto tile_v = Tile{16,256, 32, 1,4,1};
+    
 
     auto param = Params{
-        batch_size,seqlen,num_heads,head_size,tile_q,tile_k,q.data_ptr(),k.data_ptr(),v.data_ptr(),q.stride(0),q.stride(1)
+        batch_size,seqlen,num_heads,head_size,
+        tile_q,tile_k,tile_v,
+        q.data_ptr(),k.data_ptr(),v.data_ptr(),
+        q.stride(0),q.stride(1)
     };
 
-
-    // 这里面的block的size是 batch * heads ，也就是每一个block里面，处理完整的一个q*k^*v的运算
-    dim3 grid(batch_size, num_heads, 1);
-
-    //TODO
-    device_1xN_loop<<<grid, 128>>>(params);
+    run_fmha_fp16_sm80(param);
 
 }
 
