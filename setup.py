@@ -50,7 +50,7 @@ setup(
     ),
     author="xws117",
     author_email="shamy117@qq.com",
-    description="a simple cuda code implementation of FlashAttention",
+    description="A simple cuda code implementation of FlashAttention",
     # long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/xws117/mini-flashattention",

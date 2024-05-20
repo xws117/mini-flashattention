@@ -4,9 +4,10 @@
 #include <cuda_fp16.h>
 
 #include "params.h"
+#include "utils.h"
 
 
-#define THREADS_PER_ROW 2
+#define THREADS_PER_ROW 4
 #define BYTES_PER_LDG 16
 #define LDGS 1
 #define BYTES_PER_ELEMENT 2
@@ -38,11 +39,21 @@ struct Gmem_tile_qkv {
     const uint32_t row_stride_in_bytes;
     char *ptr;
     // The fetch registers.
-    uint4 fetch_[LDGS];
+    uint4 fetch_;
     // Keep track of the row the thread is processing as we move the tile.
     // int row_;
     const int tidx_;
 
     const bool col_predicate;
+
+    inline __device__ void load() {
+        int row_ = tidx_ / THREADS_PER_ROW;
+        const void *ptrs;
+        ptrs = ptr;
+        fetch_ = make_uint4(0, 0, 0, 0);
+        // not packing predicates removes restrictions (e.g. FP16 384, 4 warps)
+        Ldg_functor<uint4, 1> fct(fetch_, ptrs);
+        fct.load(0, 1);
+    }
 
 };

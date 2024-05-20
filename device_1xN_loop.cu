@@ -6,12 +6,19 @@ inline __device__ void device_1xN_(const Params &params, const int bidb, const i
 
 //    inline __device__ Gmem_tile_qkv(void *ptr_, const uint32_t row_stride_in_elts, int bidh,int bidb,Params param,
 //                                    const uint32_t head_stride_in_elts, const int headdim, const int tidx)
-
     const int tidx = threadIdx.x;
+    __shared__ half smem[16 * 32 *2];
     Gmem_tile_qkv q = {params.q_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
-    if (tidx==0){
-        printf("hhhh");
-    }
+//    if (tidx==0){
+//        printf("hhhh");
+//    }
+    Gmem_tile_qkv k = {params.k_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
+    Gmem_tile_qkv v = {params.v_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
+
+    q.load();
+    __syncthreads();
+
+
 
 }
 
@@ -47,7 +54,8 @@ __global__ void fmha_fprop_fp16_sm80_loop_kernel(Params params) {
 void run_fmha_fp16_sm80(Params params) {
     auto batch_size = params.b;
     auto num_heads = params.h;
-    // 这里面的block的size是 batch * heads ，也就是每一个block里面，处理完整的一个q*k^*v的运算
+    // 这里面的block的size是 batch * heads ，也就是每一个block里面，处理完整的一个q*k^*v的运算 ，每一个block中q为 seqlem * head_size
     dim3 grid(batch_size, num_heads, 1);
-    fmha_fprop_fp16_sm80_loop_kernel<<<grid,128>>>(params);
+    // 每一个block中使用128个线程进行处理和计算，分为4个warp，
+    fmha_fprop_fp16_sm80_loop_kernel<<<grid,64>>>(params);
 }

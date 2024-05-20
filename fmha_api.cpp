@@ -29,9 +29,9 @@ void fwd(
     // tile shape
     //using Kernel_traits = FMHA_kernel_traits<256, 64, 16, 1, 4, 0x08u, elem_type>;
 
-    // total warp is 4, threads num is 4x32=128
+    // total warp is 2, threads num is 2x32=64
     int warps_M = 1;
-    int warps_N = 4;
+    int warps_N = 2;
     int THREADS = 128;
 
     auto batch_size = 64;
@@ -40,16 +40,16 @@ void fwd(
     auto head_size = q_size[2];
 
     //TODO
-    auto tile_q = Tile{16,256, 32, 1,4,1};
-    auto tile_k = Tile{16, 32,256, 1,4,1};
-    auto tile_v = Tile{16,256, 32, 1,4,1};
+    auto tile_q = Tile{16,256, 32, warps_M, warps_N,1};
+    auto tile_k = Tile{16, 32,256, warps_M, warps_N,1};
+    auto tile_v = Tile{16,256, 32, warps_M, warps_N,1};
     
 
     auto param = Params{
-        batch_size,seqlen,num_heads,head_size,
-        tile_q,tile_k,tile_v,
-        q.data_ptr(),k.data_ptr(),v.data_ptr(),
-        q.stride(0),q.stride(1)
+        batch_size, seqlen, num_heads, head_size,
+        tile_q, tile_k, tile_v,
+        q.data_ptr(), k.data_ptr(), v.data_ptr(),
+        q.stride(0), q.stride(1)
     };
 
     run_fmha_fp16_sm80(param);

@@ -1,7 +1,7 @@
 ## mini-flashattention
 A simple cuda code help you understand how flashattention work
 
-No dropout , No mask , Fixed input
+No dropout , No mask , Fixed input size
 
 # todo list
 1. - [ ] cuda implement
