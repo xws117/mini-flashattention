@@ -9,7 +9,7 @@
 
 #include <cuda_fp16.h>
 
-#pragma once#
+#pragma once
 
 
 struct kernel_traits{

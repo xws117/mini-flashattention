@@ -34,22 +34,22 @@ void fwd(
     int warps_N = 2;
     int THREADS = 128;
 
-    auto batch_size = 64;
-    auto seqlen = 1024;
-    auto num_heads = q_size[1];
-    auto head_size = q_size[2];
+    auto batch_size = q_size[0];
+    auto seqlen = q_size[1];
+    auto num_heads = q_size[2];
+    auto head_size = q_size[3];
 
     //TODO
-    auto tile_q = Tile{16,256, 32, warps_M, warps_N,1};
-    auto tile_k = Tile{16, 32,256, warps_M, warps_N,1};
-    auto tile_v = Tile{16,256, 32, warps_M, warps_N,1};
+    auto tile_q = Tile{16, 16, 32, warps_M, warps_N, 1};
+    auto tile_k = Tile{16, 32,256, warps_M, warps_N, 1};
+    auto tile_v = Tile{16,256, 32, warps_M, warps_N, 1};
     
 
     auto param = Params{
         batch_size, seqlen, num_heads, head_size,
         tile_q, tile_k, tile_v,
         q.data_ptr(), k.data_ptr(), v.data_ptr(),
-        q.stride(0), q.stride(1)
+        q.stride(1), q.stride(2)
     };
 
     run_fmha_fp16_sm80(param);

@@ -10,12 +10,18 @@ inline __device__ void device_1xN_(const Params &params, const int bidb, const i
 //                                    const uint32_t head_stride_in_elts, const int headdim, const int tidx)
     const int tidx = threadIdx.x;
     __shared__ char smem[16 * 32 *2];
-    Gmem_tile_qkv q = {params.q_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
+    Gmem_tile_qkv q = {params.q_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
 //    if (tidx==0){
 //        printf("hhhh");
 //    }
-    Gmem_tile_qkv k = {params.k_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
-    Gmem_tile_qkv v = {params.v_ptr, params.row_stride_in_elts,bidb,bidh,params.head_stride_in_elts,params.d,tidx};
+    Gmem_tile_qkv k = {params.k_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
+    Gmem_tile_qkv v = {params.v_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
+
+    // TODO
+    //if(loop_step_idx!=0){
+    //  q.move()    在循环不为1的情况下，把q的offset向下移动
+    // }
+
 
     q.load();
     __syncthreads();
@@ -24,19 +30,19 @@ inline __device__ void device_1xN_(const Params &params, const int bidb, const i
         printf("uint4: (%u, %u, %u, %u)\n", q.fetch_.x, q.fetch_.y, q.fetch_.z, q.fetch_.w);
     }
 
-    Smem_tile_row_a smem_q = {smem,tidx};
-    smem_q.store(q.fetch_);
-    __syncthreads();
-    half* half_data = reinterpret_cast<half*>(smem);
-    if (bidb==0 && bidh==0 && tidx==0){
-        for(int i=0;i<4;i++){
-            for(int j=0; j<8*8; j++){
-                printf("%f ", __half2float(half_data[i*8*8 + j] ));
-            }
-            printf("\n");
-        }
-    }
-
+//
+//    Smem_tile_row_a smem_q = {smem,tidx};
+//    smem_q.store(q.fetch_);
+//    __syncthreads();
+//    half* half_data = reinterpret_cast<half*>(smem);
+//    if (bidb==0 && bidh==0 && tidx==0){
+//        for(int i=0;i<4;i++){
+//            for(int j=0; j<8*8; j++){
+//                printf("%f ", __half2float(half_data[i*8*8 + j] ));
+//            }
+//            printf("\n");
+//        }
+//    }
 }
 
 inline __device__ void device_1xN_loop(const Params &params){
@@ -65,21 +71,31 @@ inline __device__ void device_1xN_loop(const Params &params){
 }
 
 __global__ void fmha_fprop_fp16_sm80_loop_kernel(Params params) {
-    printf("Begin of fmha_fprop_fp16_sm80_loop_kernel \n");
+    if(blockIdx.x==0 && blockIdx.y==0 && threadIdx.x==0) {
+        printf("Begin of fmha_fprop_fp16_sm80_loop_kernel \n");
+        char * ptr = static_cast<char*>(params.q_ptr);
+        for(int i=0;i<16;i++){
+            printf("origin data %d is %c \n",i,ptr[i]);
+        }
+    }
     device_1xN_loop(params);
-    printf("Begin of fmha_fprop_fp16_sm80_loop_kernel \n");
+    if(blockIdx.x==0 && blockIdx.y==0 && threadIdx.x==0) {
+        printf("End of fmha_fprop_fp16_sm80_loop_kernel \n");
+    }
 }
+
 __global__ void fmha_test() {
-    printf("wthat the fuck");
+    printf("wthat the fuck\n");
 }
 
 void run_fmha_fp16_sm80(Params params) {
     printf("Begin of run_fmha_fp16_sm80 \n");
     auto batch_size = params.b;
     auto num_heads = params.h;
+    auto seqlen = params.s;
     // 这里面的block的size是 batch * heads ，也就是每一个block里面，处理完整的一个q*k^*v的运算 ，每一个block中q为 seqlem * head_size
     dim3 grid(batch_size, num_heads, 1);
-    // 每一个block中使用128个线程进行处理和计算，分为4个warp，
+    // 每一个block中使用64个线程进行处理和计算，分为2个warp，
     fmha_fprop_fp16_sm80_loop_kernel<<<grid,64>>>(params);
     fmha_test<<<1,2>>>();
     cudaDeviceSynchronize();

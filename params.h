@@ -1,7 +1,7 @@
 //
 // Created by mark on 2024-05-15.
 //
-#pragma once#
+#pragma once
 #ifndef MINI_FLASHATTENTION_PARAMS_H
 #define MINI_FLASHATTENTION_PARAMS_H
 

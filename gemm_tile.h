@@ -5,6 +5,7 @@
 
 #include "params.h"
 #include "utils.h"
+#include <stdio.h>
 
 
 #define THREADS_PER_ROW 4
@@ -14,7 +15,7 @@
 
 struct Gmem_tile_qkv {
 
-    inline __device__ Gmem_tile_qkv(void *ptr_, const uint32_t row_stride_in_elts, int bidh,int bidb,
+    inline __device__ Gmem_tile_qkv(void *ptr_, const uint32_t row_stride_in_elts, int bidh,int bidb,int seqlen,
                                     const uint32_t head_stride_in_elts, const int headdim, const int tidx)
             : row_stride_in_bytes(row_stride_in_elts * BYTES_PER_ELEMENT)
             , ptr(reinterpret_cast<char *>(ptr_))
@@ -28,13 +29,16 @@ struct Gmem_tile_qkv {
 
 
         // offset之前所有的 行 * 行的大小
-        uint32_t row_offset = (uint32_t)(( bidb * 1024  + row) * row_stride_in_bytes);
+        uint32_t row_offset = (uint32_t)(( bidb * seqlen  + row) * row_stride_in_bytes);
 
         // offset 本行之前所有的 head * head_size
         row_offset += (uint32_t)(bidh * head_stride_in_elts * BYTES_PER_ELEMENT);
 
         // 然后offset自己的col*BYTES_PER_LDG 就得到了最后的要开始读取数据的位置
         ptr += row_offset + col * BYTES_PER_LDG;
+        if(blockIdx.x==0 && blockIdx.y==0 && threadIdx.x==0) {
+            printf("ptr is %u\n",ptr);
+        }
     };
     const uint32_t row_stride_in_bytes;
     char *ptr;
@@ -53,7 +57,7 @@ struct Gmem_tile_qkv {
         fetch_ = make_uint4(0, 0, 0, 0);
         // not packing predicates removes restrictions (e.g. FP16 384, 4 warps)
         Ldg_functor<uint4, 1> fct(fetch_, ptrs);
-        fct.load(0, 1);
+        fct.load();
     }
 
 

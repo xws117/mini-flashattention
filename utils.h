@@ -46,10 +46,8 @@ struct Ldg_functor {
     }
 
     // Trigger the loads.
-    inline __device__ void load(int ii, bool p) {
-        if( p ) {
-            ldg(fetch_, ptrs_);
-        }
+    inline __device__ void load() {
+        ldg(fetch_, ptrs_);
     }
 
     // The fetch registers.
