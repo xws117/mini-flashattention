@@ -1,9 +1,9 @@
 import torch
 import mini_flashattention
 
-batch_size = 16
+batch_size = 1
 seqlen = 16     # 把这个seqlen定死了
-head_num = 16
+head_num = 1
 n = 32
 device = 'cuda'
 dtype = torch.float16

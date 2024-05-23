@@ -3,13 +3,14 @@
 #include "gemm_tile.h"
 #include "smem_tile.h"
 #include <stdio.h>
+#include "utils.h"
 
 inline __device__ void device_1xN_(const Params &params, const int bidb, const int bidh, int steps, const int loop_step_idx) {
 
 //    inline __device__ Gmem_tile_qkv(void *ptr_, const uint32_t row_stride_in_elts, int bidh,int bidb,Params param,
 //                                    const uint32_t head_stride_in_elts, const int headdim, const int tidx)
     const int tidx = threadIdx.x;
-    __shared__ char smem[16 * 32 *2];
+    extern __shared__ char smem[];
     Gmem_tile_qkv q = {params.q_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
 //    if (tidx==0){
 //        printf("hhhh");
@@ -30,20 +31,29 @@ inline __device__ void device_1xN_(const Params &params, const int bidb, const i
         printf("uint4: (%u, %u, %u, %u)\n", q.fetch_.x, q.fetch_.y, q.fetch_.z, q.fetch_.w);
     }
 
-//
-//    Smem_tile_row_a smem_q = {smem,tidx};
-//    smem_q.store(q.fetch_);
-//    __syncthreads();
-//    half* half_data = reinterpret_cast<half*>(smem);
-//    if (bidb==0 && bidh==0 && tidx==0){
-//        for(int i=0;i<4;i++){
-//            for(int j=0; j<8*8; j++){
-//                printf("%f ", __half2float(half_data[i*8*8 + j] ));
-//            }
-//            printf("\n");
-//        }
-//    }
+    __syncthreads();
+    printf("[ ] ptr is %d \n",&smem);
+    Smem_tile_row_a smem_q = {smem,tidx};
+    if (bidb==0 && bidh==0 && tidx==0){
+        printf("Init Smem :");
+    }
+    smem_q.store(q.fetch_);
+    __syncthreads();
+    if (bidb==0 && bidh==0 && tidx==0){
+        printf("After Smem :");
+    }
+
+    half* half_data = reinterpret_cast<half*>(smem);
+    if (bidb==0 && bidh==0 && tidx==0){
+        for(int i=0;i<4;i++){
+            for(int j=0; j<8*8; j++){
+                printf("%f ", __half2float(half_data[i*8*8 + j] ));
+            }
+            printf("\n");
+        }
+    }
 }
+
 
 inline __device__ void device_1xN_loop(const Params &params){
 
@@ -73,10 +83,18 @@ inline __device__ void device_1xN_loop(const Params &params){
 __global__ void fmha_fprop_fp16_sm80_loop_kernel(Params params) {
     if(blockIdx.x==0 && blockIdx.y==0 && threadIdx.x==0) {
         printf("Begin of fmha_fprop_fp16_sm80_loop_kernel \n");
-        char * ptr = static_cast<char*>(params.q_ptr);
-        for(int i=0;i<16;i++){
-            printf("origin data %d is %c \n",i,ptr[i]);
-        }
+//        char * ptr = static_cast<char*>(params.q_ptr);
+//        for(int i=0;i<16;i++){
+//            printf("origin data %d is %c \n",i,ptr[i]);
+//        }
+//        uint4 dst = make_uint4(0,0,0,0);
+//        dst = *reinterpret_cast<const uint4*>(params.q_ptr);
+//        printf("Test uint4: (%u, %u, %u, %u)\n", dst.x, dst.y, dst.z, dst.w);
+//        ldg(dst,params.q_ptr);
+//
+//        printf("fmha_fprop_fp16_sm80_loop_kernel ptr is %u\n",params.q_ptr);
+//
+//        printf("After Test uint4: (%u, %u, %u, %u)\n", dst.x, dst.y, dst.z, dst.w);
     }
     device_1xN_loop(params);
     if(blockIdx.x==0 && blockIdx.y==0 && threadIdx.x==0) {
@@ -96,7 +114,8 @@ void run_fmha_fp16_sm80(Params params) {
     // 这里面的block的size是 batch * heads ，也就是每一个block里面，处理完整的一个q*k^*v的运算 ，每一个block中q为 seqlem * head_size
     dim3 grid(batch_size, num_heads, 1);
     // 每一个block中使用64个线程进行处理和计算，分为2个warp，
-    fmha_fprop_fp16_sm80_loop_kernel<<<grid,64>>>(params);
+    int sharedmem = 16 *32 *2;
+    fmha_fprop_fp16_sm80_loop_kernel<<<grid,64,sharedmem>>>(params);
     fmha_test<<<1,2>>>();
     cudaDeviceSynchronize();
     printf("End of run_fmha_fp16_sm80 \n");
