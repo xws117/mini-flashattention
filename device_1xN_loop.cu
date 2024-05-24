@@ -7,24 +7,26 @@
 
 inline __device__ void device_1xN_(const Params &params, const int bidb, const int bidh, int steps, const int loop_step_idx) {
 
-//    inline __device__ Gmem_tile_qkv(void *ptr_, const uint32_t row_stride_in_elts, int bidh,int bidb,Params param,
-//                                    const uint32_t head_stride_in_elts, const int headdim, const int tidx)
+    //    inline __device__ Gmem_tile_qkv(void *ptr_, const uint32_t row_stride_in_elts, int bidh,int bidb,Params param,
+    //                                    const uint32_t head_stride_in_elts, const int headdim, const int tidx)
     const int tidx = threadIdx.x;
     extern __shared__ char smem[];
     Gmem_tile_qkv q = {params.q_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
-//    if (tidx==0){
-//        printf("hhhh");
-//    }
+    //    if (tidx==0){
+    //        printf("hhhh");
+    //    }
     Gmem_tile_qkv k = {params.k_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
     Gmem_tile_qkv v = {params.v_ptr, params.row_stride_in_elts,bidb,bidh,params.s,params.head_stride_in_elts,params.d,tidx};
 
     // TODO
-    //if(loop_step_idx!=0){
-    //  q.move()    在循环不为1的情况下，把q的offset向下移动
+    // if(loop_step_idx!=0){
+    //   q.move()    在循环不为1的情况下，把q的offset向下移动
     // }
 
 
     q.load();
+    k.load();
+    v.load();
     __syncthreads();
 
     if (bidb==0 && bidh==0 && tidx==0){
